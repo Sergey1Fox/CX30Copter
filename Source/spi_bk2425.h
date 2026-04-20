@@ -14,12 +14,14 @@
 /* SPI Command Definitions */
 #define BK_CMD_READ_REG     0x00    /* Read register */
 #define BK_CMD_WRITE_REG    0x20    /* Write register */
+#define BK_CMD_RX_PAYLOAD_WIDTH   0x60    /* Read RX payload width*/
 #define BK_CMD_RX_PAYLOAD   0x61    /* Read RX payload */
 #define BK_CMD_TX_PAYLOAD   0xA0    /* Write TX payload */
 #define BK_CMD_FLUSH_RX     0xE2    /* Flush RX FIFO */
 #define BK_CMD_FLUSH_TX     0xE1    /* Flush TX FIFO */
 #define BK_CMD_ACTIVATE     0x50    /* Activate features */
-#define BK_CMD_LOCK_UNLOCK  0x53    /* Lock/Unlock */
+#define BK_CMD_TOGGLE_BANK  0x53    /* Toggles the register bank */
+#define BK_CMD_FEATURES     0x73    /* Activate features */
 #define BK_CMD_NOP          0xFF    /* No operation */
 
 /* BK2425 Register Addresses */
@@ -32,7 +34,7 @@
 #define BK_REG_RF_SETUP     0x06
 #define BK_REG_STATUS       0x07
 #define BK_REG_OBSERVE_TX   0x08
-#define BK_REG_RPD          0x09
+#define BK_REG_CD           0x09  /* Carrier Detect */
 #define BK_REG_RX_ADDR_P0   0x0A
 #define BK_REG_RX_ADDR_P1   0x0B
 #define BK_REG_TX_ADDR      0x10

@@ -20,12 +20,10 @@ static const BK_InitStep_t bk_init_sequence[] = {
     /* Step 1-4: Activate and unlock */
     {0x07, 0},    /* NOP */
     {0xA5, 0},    /* Part of activate sequence */
-    {0x50, 0},    /* ACTIVATE command */
-    {0x53, 0},    /* LOCK/UNLOCK */
     
     /* Step 5-9: Write registers 0x20-0x27 (pipe settings) */
     {0x20, 0},    /* Write CONFIG */
-    {0x08, 0},    /* CONFIG value: PRIM_RX=0, PWR_UP=1 */
+    {0x0B, 0},    /* CONFIG value: EN_CRC=1, PRIM_RX=1, PWR_UP=1 */
     {0x21, 0},    /* Write EN_AA */
     {0x3F, 0},    /* EN_AA value: Enable auto ACK all pipes */
     {0x22, 0},    /* Write EN_RXADDR */
@@ -39,46 +37,46 @@ static const BK_InitStep_t bk_init_sequence[] = {
     {0x26, 0},    /* Write RF_SETUP */
     {0x07, 0},    /* 0dBm, 1Mbps */
     {0x27, 0},    /* Write STATUS */
-    {0x07, 0},    /* Clear interrupts */
+    {0x07, 0},    /* Clear interrupts ??? */
     {0x28, 0},    /* Write OBSERVE_TX */
-    {0x00, 0},    /* OBSERVE_TX value */
+    {0x00, 0},    /* OBSERVE_TX value ??? */
     {0x29, 0},    /* Write RPD */
-    {0x00, 0},    /* RPD value */
+    {0x00, 0},    /* RPD value ??? */
     
-    /* Step 34-37: RX pipe 0 payload width */
-    {0x2C, 0},    /* Write RX_PW_P0 */
-    {0xC3, 0},    /* 8-byte payload */
-    {0x2D, 0},    /* Write RX_PW_P1 */
-    {0xC4, 0},    /* 8-byte payload */
-    {0x2E, 0},    /* Write RX_PW_P2 */
-    {0xC5, 0},    /* 8-byte payload */
-    {0x2F, 0},    /* Write RX_PW_P3 */
-    {0xC6, 0},    /* 8-byte payload */
+    /* Step 34-37: Address setup */
+    {0x2C, 0},    /* Write RX_ADDR_P2 */
+    {0xC3, 0},    /* Receive address data pipe 2 */
+    {0x2D, 0},    /* Write RX_ADDR_P3 */
+    {0xC4, 0},    /* Receive address data pipe 3 */
+    {0x2E, 0},    /* Write RX_ADDR_P4 */
+    {0xC5, 0},    /* Receive address data pipe 4 */
+    {0x2F, 0},    /* Write RX_ADDR_P5 */
+    {0xC6, 0},    /* Receive address data pipe 5 */
     
-    /* Step 42-55: Address setup */
-    {0x31, 0},    /* Write TX_ADDR */
-    {0x20, 0},    /* Address byte 0 */
-    {0x32, 0},    /* Write TX_ADDR cont */
-    {0x20, 0},    /* Address byte 1 */
-    {0x33, 0},    /* Write TX_ADDR cont */
-    {0x20, 0},    /* Address byte 2 */
-    {0x34, 0},    /* Write TX_ADDR cont */
-    {0x20, 0},    /* Address byte 3 */
-    {0x35, 0},    /* Write TX_ADDR cont */
-    {0x20, 0},    /* Address byte 4 */
-    {0x36, 0},    /* Write RX_ADDR_P0 */
-    {0x20, 0},    /* Address byte 0 */
-    {0x37, 0},    /* Write RX_ADDR_P0 cont */
-    {0x00, 0},    /* Address byte 1 */
+    /* Step 42-55: RX pipes payload width */
+    {0x31, 0},    /* Write RX_PW_P0 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 0 */
+    {0x32, 0},    /* Write RX_PW_P1 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 1 */
+    {0x33, 0},    /* Write RX_PW_P2 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 2 */
+    {0x34, 0},    /* Write RX_PW_P3 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 3 */
+    {0x35, 0},    /* Write RX_PW_P4 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 4 */
+    {0x36, 0},    /* Write RX_PW_P5 */
+    {0x20, 0},    /* Bytes in RX payload data pipe 5 */
+    {0x37, 0},    /* Write FIFO_STATUS */
+    {0x00, 0},    /* ??? */
     
-    /* Step 56-67: RX pipe addresses */
-    {0x2A, 0},    /* Write RX_ADDR_P1 */
+    /* Step 56-67: RX/TX pipe addresses */
+    {0x2A, 0},    /* Write RX_ADDR_P0 */
     {0x65, 0},    /* Address byte 0 */
     {0x65, 0},    /* Address byte 1 */
     {0x65, 0},    /* Address byte 2 */
     {0x65, 0},    /* Address byte 3 */
     {0x65, 0},    /* Address byte 4 */
-    {0x30, 0},    /* Write RX_ADDR_P0 */
+    {0x30, 0},    /* Write TX_ADDR */
     {0x65, 0},    /* Address byte 0 */
     {0x65, 0},    /* Address byte 1 */
     {0x65, 0},    /* Address byte 2 */
@@ -86,82 +84,81 @@ static const BK_InitStep_t bk_init_sequence[] = {
     {0x65, 0},    /* Address byte 4 */
     
     /* Step 68-75: Final config */
-    {0x1D, 0},    /* Write FEATURE */
-    {0xA5, 0},    /* FEATURE value */
-    {0x50, 0},    /* ACTIVATE */
-    {0x73, 0},    /* ACTIVATE data */
-    {0x3C, 0},    /* Write ?? */
-    {0x3F, 0},    /* Value */
-    {0x3D, 0},    /* Write ?? */
-    {0x07, 0},    /* Value */
+    {0x1D, 0},    /* Read FEATURE */
+    {0xA5, 0},    /* Get FEATURE value */
+    {0x50, 0},    /* ACTIVATE features */
+    {0x73, 0},    /* R_RX_PL_WID, W_ACK_PAYLOAD, W_TX_PAYLOAD_NOACK features */
+    {0x3C, 0},    /* Write DYNPD */
+    {0x3F, 0},    /* Enable dynamic payload length for all pipes */
+    {0x3D, 0},    /* Write FEATURE */
+    {0x07, 0},    /* Enables Dynamic Payload Length, Enables Payload with ACK, Enables the W_TX_PAYLOAD_NOACK command */
     
     /* Step 76-79: Final activate */
-    {0x07, 0},
+    {0x07, 0},    /* Read STATUS */
     {0xA5, 0},
-    {0x50, 0},
+    {0x50, 0},    /* Switch to Register Bank 1 */
     {0x53, 0},
     
-    /* Step 80-84: Write register 0x20 */
+    /* For register 0 to 8 at bank 1, the byte
+       order is inversed that the MSB byte is R/W before LSB byte. */
+    /* Step 80-84: Write register 0x00  Bank 1 */
     {0x20, 0},
-    {0x40, 0},    /* CONFIG: PWR_UP=1 */
-    {0x4B, 0},    /* Additional config */
+    {0x40, 0},    /* Must write with 0x404B01E2 */
+    {0x4B, 0}, 
     {0x01, 0},
-    {0xE2, 0},    /* FLUSH_RX */
-    
-    /* Step 85-89: Write register 0x21 */
+    {0xE2, 0},    
+    /* Step 85-89: Write register 0x01 Bank 1 */
     {0x21, 0},
-    {0xC0, 0},
+    {0xC0, 0},    /* Must write with 0xC04B0000 */
     {0x4B, 0},
     {0x00, 0},
-    {0x00, 0},
-    
-    /* Step 90-94: Write register 0x22 */
+    {0x00, 0},    
+    /* Step 90-94: Write register 0x02 Bank 1 */
     {0x22, 0},
-    {0xD0, 0},
+    {0xD0, 0},    /* Must write with 0xD0FC8C02 */
     {0xFC, 0},
     {0x8C, 0},
-    {0x02, 0},
-    
-    /* Step 95-99: Write register 0x23 */
+    {0x02, 0},    
+    /* Step 95-99: Write register 0x03 Bank 1 */
     {0x23, 0},
-    {0x99, 0},
+    {0x99, 0},    /* Must write with 0x99003921 */
     {0x00, 0},
     {0x39, 0},
     {0x21, 0},
-    
-    /* Step 100-104: Write register 0x24 */
+
+    /* Step 100-104: Write register 0x04 Bank 1 */
     {0x24, 0},
-    {0xF9, 0},
-    {0x96, 0},
-    {0x82, 0},
+    {0xF9, 0},    /* 1Msps 0xF996821B */
+    {0x96, 0},    /* 2Msps 0xF99682DB */
+    {0x82, 0},    /* 250ksps 0xF9968ADB */
     {0x1B, 0},
     
-    /* Step 105-109: Write register 0x25 */
+    /* Step 105-109: Write register 0x05 Bank 1 */
     {0x25, 0},
-    {0x24, 0},
+    {0x24, 0},    /* 1Msps 0x24060FA6 (Disable RSSI) */
     {0x06, 0},
     {0x0F, 0},
     {0xA6, 0},
     
-    /* Step 110-114: Write register 0x2C */
+    /* Step 110-114: Write register 0x0C Bank 1 */
     {0x2C, 0},
-    {0x00, 0},
+    {0x00, 0},    /* Please initialize with 0x05731200 For 120us mode 0x00731200 */
     {0x12, 0},
     {0x73, 0},
     {0x00, 0},
     
-    /* Step 115-119: Write register 0x2D */
+    /* Step 115-119: Write register NEW_FEATURE 0x0D Bank 1 */
     {0x2D, 0},
-    {0x36, 0},
+    {0x36, 0},    /* Initialize with 0x0080B436 */
     {0xB4, 0},
     {0x80, 0},
     {0x00, 0},
     
-    /* Step 120-131: Write register 0x2E */
+    /* Step 120-131: Write register RAMP 0x0E Bank 1 */
     {0x2E, 0},
-    {0x41, 0},
-    {0x10, 0},
-    {0x04, 0},
+    {0x41, 0},    /* Ramp curve */
+    {0x10, 0},    /* Please write with */
+    {0x04, 0},    /* 0xFFFFFEF7CF208104082041 */
     {0x82, 0},
     {0x20, 0},
     {0x08, 0},
@@ -170,6 +167,13 @@ static const BK_InitStep_t bk_init_sequence[] = {
     {0x7D, 0},
     {0xEF, 0},
     {0xFF, 0},
+
+    {0x50, 0},    /* Switch to Register Bank 0 */
+    {0x53, 0},
+    {0xE2, 0},    /* Flush RX FIFO */
+    {0x00, 0},
+    {0x27, 0},    /* Write STATUS */
+    {0x0E, 0},
 };
 
 #define BK_INIT_STEPS (sizeof(bk_init_sequence) / sizeof(bk_init_sequence[0]))
