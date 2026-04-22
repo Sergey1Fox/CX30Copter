@@ -65,7 +65,7 @@ void I2C_MPU_Init(void)
     
     /* I2C Init: 200KHz */
     I2C_DeInit();
-    I2C_Init(200000,                    /* 200KHz */
+    I2C_Init(400000,                    /* 400KHz */
              MPU6050_ADDR,              /* Own address (not used as master) */
              I2C_DUTYCYCLE_2,           /* Duty cycle */
              I2C_ACK_CURR,              /* Acknowledge */

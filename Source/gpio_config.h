@@ -30,8 +30,8 @@
 #define SPI_MOSI_GPIO_PIN   (GPIO_PIN_6)
 #define SPI_MISO_GPIO_PORT  (GPIOC)
 #define SPI_MISO_GPIO_PIN   (GPIO_PIN_7)
-#define SPI_SS_GPIO_PORT    (GPIOE)
-#define SPI_SS_GPIO_PIN     (GPIO_PIN_5)
+#define SPI_SS_GPIO_PORT    (GPIOC)
+#define SPI_SS_GPIO_PIN     (GPIO_PIN_4)
 
 /* I2C Pins for MPU6050 */
 #define I2C_SCL_GPIO_PORT   (GPIOB)

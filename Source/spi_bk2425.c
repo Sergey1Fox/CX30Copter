@@ -174,6 +174,12 @@ static const BK_InitStep_t bk_init_sequence[] = {
     {0x00, 0},
     {0x27, 0},    /* Write STATUS */
     {0x0E, 0},
+    {0x20, 0},    /* Write CONFIG */
+    {0x0B, 0},
+    {0x20, 0},    /* Write CONFIG */
+    {0x09, 20},   /* PowerDown */
+    {0x20, 0},    /* Write CONFIG */
+    {0x0B, 0},    /* PowerUp startup time 1.5ms */
 };
 
 #define BK_INIT_STEPS (sizeof(bk_init_sequence) / sizeof(bk_init_sequence[0]))
@@ -191,12 +197,12 @@ static void SPI_WaitBusy(void)
 static void SPI_Select(void)
 {
     SPI_WaitBusy();
-    GPIO_WriteLow(GPIOE, GPIO_PIN_5);  /* SS low */
+    GPIO_WriteLow(SPI_SS_GPIO_PORT, SPI_SS_GPIO_PIN);  /* SS low */
 }
 
 static void SPI_Deselect(void)
 {
-    GPIO_WriteHigh(GPIOE, GPIO_PIN_5);  /* SS high */
+    GPIO_WriteHigh(SPI_SS_GPIO_PORT, SPI_SS_GPIO_PIN);  /* SS high */
     SPI_WaitBusy();
 }
 
