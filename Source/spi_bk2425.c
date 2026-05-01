@@ -168,18 +168,18 @@ static const BK_InitStep_t bk_init_sequence[] = {
     {0xEF, 0},
     {0xFF, 0},
 
-    {0x50, 0},    /* Switch to Register Bank 0 */
-    {0x53, 0},
+    {BK_CMD_ACTIVATE, 0},    /* Switch to Register Bank 0 */
+    {BK_CMD_TOGGLE_BANK, 0},
     {0xE2, 0},    /* Flush RX FIFO */
     {0x00, 0},
     {0x27, 0},    /* Write STATUS */
     {0x0E, 0},
-    {0x20, 0},    /* Write CONFIG */
+    {BK_CMD_WRITE_REG | BK_REG_CONFIG, 0},    /* Write CONFIG */
     {0x0B, 0},
-    {0x20, 0},    /* Write CONFIG */
-    {0x09, 20},   /* PowerDown */
-    {0x20, 0},    /* Write CONFIG */
-    {0x0B, 0},    /* PowerUp startup time 1.5ms */
+    {BK_CMD_WRITE_REG | BK_REG_CONFIG, 0},    /* Write CONFIG */
+    {0x09, 20},                               /* PowerDown */
+    {BK_CMD_WRITE_REG | BK_REG_CONFIG, 0},    /* Write CONFIG */
+    {0x0B, 0},                                /* PowerUp startup time 1.5ms */
 };
 
 #define BK_INIT_STEPS (sizeof(bk_init_sequence) / sizeof(bk_init_sequence[0]))
@@ -290,9 +290,7 @@ uint8_t SPI_BK_ReadPayload(void)
     uint8_t success = 0;
     
     /* Check STATUS register for RX_DR bit */
-    SPI_Select();
-    status = SPI_Transfer(BK_CMD_NOP);
-    SPI_Deselect();
+    status = SPI_BK_ReadStatus();
     
     /* Check if RX FIFO has data */
     if (status & 0x40) {  /* RX_DR bit */

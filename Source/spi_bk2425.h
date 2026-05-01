@@ -41,11 +41,13 @@
 #define BK_REG_RX_PW_P0     0x11
 #define BK_REG_RX_PW_P1     0x12
 #define BK_REG_FIFO_STATUS  0x17
+#define BK_REG_DYNPAYLOAD   0x1C
+#define BK_REG_FEATURE      0x1D
 
 /* BK2425 RX Payload */
 typedef struct {
     uint8_t left_stick_y;     /* 0x80 default, 0x00-0xFF, vertical speed */
-    uint8_t left_stick_x;     /* 0x80 default, 0x00-0xFF, afterburn */
+    uint8_t left_stick_x;     /* 0x80 default, 0x00-0xFF, afterburner */
     uint8_t left_rocker;      /* 0x40 default, 0x0E-0x72, pitch adjust */
     uint8_t right_stick_y;    /* 0x80 default, 0x60-0xA0, pitch control */
     uint8_t right_stick_x;    /* 0x80 default, 0x60-0xA0, roll control */

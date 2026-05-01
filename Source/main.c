@@ -29,11 +29,21 @@
 typedef enum {
     SYS_INIT = 0,
     SYS_IDLE,
-    SYS_FLIGHT
+    SYS_MOTOR_ON,
+    SYS_FLIGHT,
+    SYS_FLIGHT_AUTO,
+    SYS_FLIGHT_RETURN
 } SystemState_t;
+
+typedef enum {
+    SYS_LOSSCONTROL_HOLD = 0,
+    SYS_LOSSCONTROL_HOLD_AND_DOWN,
+    SYS_LOSSCONTROL_RETURN,
+} SystemLossControl_t;
 
 /* Private variables ---------------------------------------------------------*/
 static SystemState_t sys_state = SYS_INIT;
+static SystemLossControl_t sys_losscontrol = SYS_LOSSCONTROL_HOLD;
 static volatile uint32_t sys_tick_ms = 0;
 static uint8_t led1_flash_counter = 0;
 static uint8_t led2_no_payload_counter = 0;
@@ -125,6 +135,8 @@ static void ProcessFlightLoop(void)
 {
     static uint8_t loop_counter = 0;
     fp_t motor_rf, motor_rb, motor_lf, motor_lb;
+    /* dt = 1/500 sec, pre-computed */
+    fp_t dt_fp = FP_DIV(INT_TO_FP(1), INT_TO_FP(500));
     
     /* Read BK2425 payload */
     SPI_BK_ReadPayload();
@@ -137,8 +149,6 @@ static void ProcessFlightLoop(void)
         MPU6050_ReadAllData();
         
         /* Update state estimation */
-        /* dt = 1/500 sec, pre-computed */
-        fp_t dt_fp = FP_DIV(INT_TO_FP(1), INT_TO_FP(500));
         StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
                                mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z,
                                dt_fp);
@@ -219,7 +229,7 @@ void main(void)
         ProcessLEDs();
         
         /* Check system state */
-        if (sys_state == SYS_FLIGHT && flight_mode) {
+        if (sys_state > SYS_IDLE) {
             /* Flight mode: 500Hz loop */
             if (timer_tick_500hz) {
                 timer_tick_500hz = 0;
@@ -234,7 +244,7 @@ void main(void)
         }
         
         /* Watchdog: if no payload for extended period, return to idle */
-        if (bk_no_payload_count > 100 && sys_state == SYS_FLIGHT) {
+        if (bk_no_payload_count > 100 && sys_state > SYS_MOTOR_ON) {
             sys_state = SYS_IDLE;
             flight_mode = 0;
             PWM_SetAllMotors(0);
