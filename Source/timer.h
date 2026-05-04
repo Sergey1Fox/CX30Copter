@@ -18,6 +18,7 @@
 /* External flags */
 extern volatile uint8_t timer_tick_500hz;
 extern volatile uint8_t timer_tick_20hz;
+extern volatile uint8_t timer_tick_1hz;
 
 void Timer4_Init(void);
 void Timer1_PWM_Init(void);

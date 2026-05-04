@@ -10,10 +10,12 @@
 /* Timer tick flags */
 volatile uint8_t timer_tick_500hz = 0;
 volatile uint8_t timer_tick_20hz = 0;
+volatile uint8_t timer_tick_1hz = 0;
 
 /* Counter for 20Hz tick (500/20 ≈ 25) */
-static volatile uint8_t tick_counter = 0;
+//static volatile uint8_t tick_counter = 0;
 #define TICK_20HZ_DIVIDER (500/20)
+#define TICK_1HZ_DIVIDER (20)
 
 void Timer4_Init(void)
 {
@@ -47,6 +49,7 @@ void Timer2_PWM_Init(void)
 void TIM4_Update_Handler(void)
 {
     static uint8_t counter_20hz = 0;
+    static uint8_t counter_1hz = 0;
     
     TIM4_ClearFlag(TIM4_FLAG_UPDATE);
     
@@ -58,5 +61,12 @@ void TIM4_Update_Handler(void)
     if (counter_20hz >= TICK_20HZ_DIVIDER) {
         counter_20hz = 0;
         timer_tick_20hz = 1;
+
+        /* Divide down for 1Hz tick */
+        counter_1hz++;
+        if (counter_1hz >= TICK_1HZ_DIVIDER) {
+            counter_1hz = 0;
+            timer_tick_1hz = 1;
+        }
     }
 }

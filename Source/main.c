@@ -32,7 +32,8 @@ typedef enum {
     SYS_MOTOR_ON,
     SYS_FLIGHT,
     SYS_FLIGHT_AUTO,
-    SYS_FLIGHT_RETURN
+    SYS_FLIGHT_RETURN,
+    SYS_FLIGHT_LOSSCONTROL
 } SystemState_t;
 
 typedef enum {
@@ -49,15 +50,13 @@ static uint8_t led1_flash_counter = 0;
 static uint8_t led2_no_payload_counter = 0;
 static uint8_t led3_flash_counter = 0;
 
-/* Flight mode flag */
-static uint8_t flight_mode = 0;
-
 /* Function prototypes -------------------------------------------------------*/
 static void SystemClock_Config(void);
 static void SysTick_Init(void);
 static void ProcessLEDs(void);
 static void ProcessFlightLoop(void);
 static void ProcessIdleLoop(void);
+static void ProcessMotorOnLoop(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -101,8 +100,6 @@ static void ProcessLEDs(void)
     /* LED2 (PC3): Off during init, on when payload received */
     if (sys_state == SYS_INIT) {
         LED2_Off();
-    } else if (flight_mode) {
-        LED2_On();
     } else {
         /* Flash if no payload for >10 requests */
         if (bk_no_payload_count > LED2_NO_PAYLOAD_THRESHOLD) {
@@ -111,7 +108,7 @@ static void ProcessLEDs(void)
                 LED2_Toggle();
             }
         } else {
-            LED2_Off();
+            LED2_On();
         }
     }
     
@@ -143,8 +140,6 @@ static void ProcessFlightLoop(void)
     
     /* Check if in flight mode (payload received) */
     if (bk_payload_received) {
-        flight_mode = 1;
-        
         /* Read MPU6050 data */
         MPU6050_ReadAllData();
         
@@ -170,7 +165,6 @@ static void ProcessFlightLoop(void)
         PWM_SetMotorDuty(MOTOR_LEFT_BACK, FP_TO_INT(motor_lb));
     } else {
         /* No payload - idle */
-        flight_mode = 0;
         PWM_SetAllMotors(0);
     }
 }
@@ -179,16 +173,35 @@ static void ProcessFlightLoop(void)
   * @brief  Process idle loop (20Hz)
   */
 static void ProcessIdleLoop(void)
-{
-    /* Read battery voltage */
-    ADC_Battery_GetVoltage();
-    
+{   
     /* Poll BK2425 at lower rate */
     SPI_BK_ReadPayload();
     
-    /* If payload received, transition to flight mode */
+    /* If payload received, transition to preflight mode */
     if (bk_payload_received) {
-        sys_state = SYS_FLIGHT;
+        if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
+            bk_payload.right_stick_y < 0x10 && bk_payload.right_stick_x < 0x10) {
+            sys_state = SYS_MOTOR_ON;
+            PWM_SetAllMotors(10);
+        }
+    }
+}
+
+/**
+  * @brief  Process MotorOn loop (500Hz)
+  */
+static void ProcessMotorOnLoop(void)
+{   
+    /* Poll BK2425 at lower rate */
+    SPI_BK_ReadPayload();
+    
+    /* If payload received, transition to Idle mode */
+    if (bk_payload_received) {
+        if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
+            bk_payload.right_stick_y < 0x10 && bk_payload.right_stick_x < 0x10) {
+            sys_state = SYS_IDLE;
+            PWM_SetAllMotors(0);
+        }
     }
 }
 
@@ -229,25 +242,43 @@ void main(void)
         ProcessLEDs();
         
         /* Check system state */
-        if (sys_state > SYS_IDLE) {
-            /* Flight mode: 500Hz loop */
-            if (timer_tick_500hz) {
-                timer_tick_500hz = 0;
-                ProcessFlightLoop();
-            }
-        } else {
-            /* Idle mode: 20Hz loop */
-            if (timer_tick_20hz) {
-                timer_tick_20hz = 0;
-                ProcessIdleLoop();
-            }
+        switch (sys_state)
+        {
+            case SYS_IDLE:
+                /* Idle mode: 20Hz loop */
+                if (timer_tick_20hz) {
+                    ProcessIdleLoop();
+                }
+                break;
+            case SYS_MOTOR_ON:
+            case SYS_FLIGHT:
+            case SYS_FLIGHT_AUTO:
+            case SYS_FLIGHT_RETURN:
+            case SYS_FLIGHT_LOSSCONTROL:
+                /* Flight mode: 500Hz loop */
+                if (timer_tick_500hz) {
+                    ProcessFlightLoop();
+                }
+                break;
+        
+            default:
+                break;
         }
         
+        if (timer_tick_500hz) timer_tick_500hz = 0;
+        if (timer_tick_20hz) {
+            timer_tick_20hz = 0;
+        }
+        if (timer_tick_1hz) {
+            /* Read battery voltage */
+            ADC_Battery_GetVoltage();
+
+            timer_tick_1hz = 0;
+        }
+
         /* Watchdog: if no payload for extended period, return to idle */
         if (bk_no_payload_count > 100 && sys_state > SYS_MOTOR_ON) {
-            sys_state = SYS_IDLE;
-            flight_mode = 0;
-            PWM_SetAllMotors(0);
+            sys_state = SYS_FLIGHT_LOSSCONTROL;
         }
     }
 }
