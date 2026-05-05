@@ -49,7 +49,6 @@ extern QuadState_t quad_state;
 
 void StateEstimation_Init(void);
 void StateEstimation_Update(int16_t accel_x, int16_t accel_y, int16_t accel_z,
-                            int16_t gyro_x, int16_t gyro_y, int16_t gyro_z,
-                            fp_t dt_fp);
+                            int16_t gyro_x, int16_t gyro_y, int16_t gyro_z);
 
 #endif /* __STATE_ESTIMATION_H */

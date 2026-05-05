@@ -59,14 +59,12 @@ void StateEstimation_Init(void)
 }
 
 void StateEstimation_Update(int16_t accel_x, int16_t accel_y, int16_t accel_z,
-                            int16_t gyro_x, int16_t gyro_y, int16_t gyro_z,
-                            fp_t dt_fp)
+                            int16_t gyro_x, int16_t gyro_y, int16_t gyro_z)
 {
     fp_t accel_roll, accel_pitch;
     fp_t gyro_roll, gyro_pitch, gyro_yaw;
     fp_t accel_roll_fp, accel_pitch_fp;
     fp_t dt;
-    (void)dt_fp;  /* Use fixed dt = 1/500 */
     
     dt = DT_500HZ_FP;
     

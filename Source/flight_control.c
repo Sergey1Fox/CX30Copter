@@ -15,68 +15,80 @@
 /* 0.3 = 19661 */
 #define SLIDE_VERT_GAIN     ((fp_t)19661L)
 
-/* Scaling: stick range is ~32 (0x60 to 0xA0), angle range is 30 deg */
+/* Scaling: stick range is +-32 (0x60 to 0xA0), angle range is 30 deg */
 /* scale = 30/32 = 0.9375 = 61440 in Q16.16 */
+/* qFormat(30 / 32, 16, 16) = 61440 */
 #define STICK_TO_ANGLE_SCALE ((fp_t)61440L)
+/* Scale: full stick = moderate vertical speed */
+/* 128 * 0.01 = 1.28, use 1/128 = 512 in Q16.16 */
+#define STICK_TO_SPEED_SCALE ((fp_t)512L)
+/* Scale: full stick = moderate yaw rate deg/s */
+/* use qFormat(90 / 128, 16, 16) = 46080 in Q16.16 */
+/* use qFormat(360 / 128, 16, 16) = 184320 in Q16.16 */
+/* use qFormat(540 / 128, 16, 16) = 276480 in Q16.16 */
+#define STICK_TO_RATE90_SCALE ((fp_t)46080L)
+#define STICK_TO_RATE360_SCALE ((fp_t)184320L)
+#define STICK_TO_RATE540_SCALE ((fp_t)276480L)
 
 /* External state */
 static FC_Targets_t fc_targets;
 static FC_Control_t fc_control;
+static FC_yaw_rate_mode_t fc_yaw_rate_mode;
 
 void FlightControl_Init(void)
 {
     fc_targets.target_roll = FP_ZERO;
     fc_targets.target_pitch = FP_ZERO;
+    fc_targets.target_yaw_rate = FP_ZERO;
     fc_targets.target_vertical_speed = FP_ZERO;
     
     fc_control.roll_error = FP_ZERO;
     fc_control.pitch_error = FP_ZERO;
+    fc_control.yaw_rate_error = FP_ZERO;
     fc_control.vertical_error = FP_ZERO;
     fc_control.roll_control = FP_ZERO;
     fc_control.pitch_control = FP_ZERO;
+    fc_control.yaw_rate_control = FP_ZERO;
     fc_control.vertical_control = FP_ZERO;
+
+    fc_yaw_rate_mode = YAW_RATE_MODE90;
 }
 
 void FlightControl_UpdateTargets(uint8_t right_stick_x, uint8_t right_stick_y,
-                                  uint8_t left_stick_y, uint8_t left_stick_x)
+                                 uint8_t left_stick_y, uint8_t left_stick_x)
 {
-    fp_t right_x_fp, right_y_fp, left_y_fp, left_x_fp;
-    fp_t roll_cmd, pitch_cmd, vert_cmd;
-    
-    /* Convert stick inputs to fixed-point */
-    right_x_fp = INT_TO_FP(right_stick_x);
-    right_y_fp = INT_TO_FP(right_stick_y);
-    left_y_fp = INT_TO_FP(left_stick_y);
-    left_x_fp = INT_TO_FP(left_stick_x);
+    fp_t roll_cmd, pitch_cmd, yaw_rate_cmd, vert_cmd;
     
     /* Right stick X -> Roll angle target */
     /* Dead zone +-3 from center (0x80 = 128) */
-    roll_cmd = FP_SUB(right_x_fp, STICK_RIGHT_CENTER_FP);
-    roll_cmd = fp_deadzone(roll_cmd, INT_TO_FP(3));
+    roll_cmd = INT_TO_FP((right_stick_x - STICK_RIGHT_CENTER, 3));
     /* Scale to +-30 degrees */
     fc_targets.target_roll = FP_MUL(roll_cmd, STICK_TO_ANGLE_SCALE);
     
     /* Right stick Y -> Pitch angle target */
-    pitch_cmd = FP_SUB(right_y_fp, STICK_RIGHT_CENTER_FP);
-    pitch_cmd = fp_deadzone(pitch_cmd, INT_TO_FP(3));
+    pitch_cmd = INT_TO_FP(int8_deadzone(right_stick_y - STICK_RIGHT_CENTER, 3));
     fc_targets.target_pitch = FP_MUL(pitch_cmd, STICK_TO_ANGLE_SCALE);
     
     /* Left stick Y -> Vertical speed target */
-    /* Dead zone +-10 from center */
-    vert_cmd = FP_SUB(left_y_fp, STICK_LEFT_Y_CENTER_FP);
-    vert_cmd = fp_deadzone(vert_cmd, INT_TO_FP(10));
-    /* Scale: full stick = moderate vertical speed */
-    /* 128 * 0.01 = 1.28, use 1/128 = 512 in Q16.16 */
-    fc_targets.target_vertical_speed = FP_MUL(vert_cmd, INT_TO_FP(1) / INT_TO_FP(128));
+    /* Dead zone +-3 from center */
+    vert_cmd = INT_TO_FP(int8_deadzone(left_stick_y - STICK_LEFT_CENTER, 3));
+    /* Scale: +-1.28 m/s */
+    fc_targets.target_vertical_speed = FP_MUL(vert_cmd, STICK_TO_SPEED_SCALE);
     
-    /* Left stick X -> Afterburn (affects all motors equally) */
-    /* Above center (0x80) triggers afterburn */
-    fp_t afterburn = FP_SUB(left_x_fp, STICK_LEFT_Y_CENTER_FP);
-    afterburn = fp_deadzone(afterburn, INT_TO_FP(3));
-    if (afterburn > 0) {
-        /* Add afterburn contribution to vertical speed */
-        fc_targets.target_vertical_speed = FP_ADD(fc_targets.target_vertical_speed,
-                                                   FP_MUL(afterburn, INT_TO_FP(1) / INT_TO_FP(256)));
+    /* Left stick X -> Yaw rate target */
+    /* Dead zone +-3 from center */
+    yaw_rate_cmd = int8_deadzone(left_stick_x - STICK_LEFT_CENTER, 3);
+    switch (fc_yaw_rate_mode)
+    {
+        case YAW_RATE_MODE360:
+            fc_targets.target_yaw_rate = FP_MUL(yaw_rate_cmd, STICK_TO_RATE360_SCALE);
+            break;
+        case YAW_RATE_MODE540:
+            fc_targets.target_yaw_rate = FP_MUL(yaw_rate_cmd, STICK_TO_RATE540_SCALE);
+            break;        
+        default:
+            fc_targets.target_yaw_rate = FP_MUL(yaw_rate_cmd, STICK_TO_RATE90_SCALE);
+            break;
     }
 }
 
@@ -152,4 +164,9 @@ void FlightControl_GetMotorOutputs(fp_t *rf, fp_t *rb, fp_t *lf, fp_t *lb)
     *rb = fp_sat(*rb, INT_TO_FP(PWM_DUTY_MIN), INT_TO_FP(PWM_DUTY_AFTERBURN));
     *lf = fp_sat(*lf, INT_TO_FP(PWM_DUTY_MIN), INT_TO_FP(PWM_DUTY_AFTERBURN));
     *lb = fp_sat(*lb, INT_TO_FP(PWM_DUTY_MIN), INT_TO_FP(PWM_DUTY_AFTERBURN));
+}
+
+void FlightControl_SetYawRateMode(FC_yaw_rate_mode_t yaw_rate_mode)
+{
+    fc_yaw_rate_mode = yaw_rate_mode;
 }

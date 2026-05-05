@@ -132,41 +132,34 @@ static void ProcessFlightLoop(void)
 {
     static uint8_t loop_counter = 0;
     fp_t motor_rf, motor_rb, motor_lf, motor_lb;
-    /* dt = 1/500 sec, pre-computed */
-    fp_t dt_fp = FP_DIV(INT_TO_FP(1), INT_TO_FP(500));
     
     /* Read BK2425 payload */
     SPI_BK_ReadPayload();
     
+    /* Read MPU6050 data */
+    MPU6050_ReadAllData();
+        
+    /* Update state estimation */
+    StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
+                            mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
+        
     /* Check if in flight mode (payload received) */
     if (bk_payload_received) {
-        /* Read MPU6050 data */
-        MPU6050_ReadAllData();
-        
-        /* Update state estimation */
-        StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
-                               mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z,
-                               dt_fp);
-        
         /* Update flight control targets from stick inputs */
         FlightControl_UpdateTargets(bk_payload.right_stick_x, bk_payload.right_stick_y,
                                      bk_payload.left_stick_y, bk_payload.left_stick_x);
-        
-        /* Compute motor duty cycles */
-        FlightControl_ComputeMotorDuty(quad_state.roll, quad_state.pitch,
-                                        quad_state.wyaw, quad_state.Vz);
-        
-        /* Get motor outputs and apply */
-        FlightControl_GetMotorOutputs(&motor_rf, &motor_rb, &motor_lf, &motor_lb);
-        
-        PWM_SetMotorDuty(MOTOR_RIGHT_FRONT, FP_TO_INT(motor_rf));
-        PWM_SetMotorDuty(MOTOR_RIGHT_BACK, FP_TO_INT(motor_rb));
-        PWM_SetMotorDuty(MOTOR_LEFT_FRONT, FP_TO_INT(motor_lf));
-        PWM_SetMotorDuty(MOTOR_LEFT_BACK, FP_TO_INT(motor_lb));
-    } else {
-        /* No payload - idle */
-        PWM_SetAllMotors(0);
     }
+        
+    /* Compute motor duty cycles */
+    FlightControl_ComputeMotorDuty(quad_state.roll, quad_state.pitch, quad_state.wyaw, quad_state.Vz);
+        
+    /* Get motor outputs and apply */
+    FlightControl_GetMotorOutputs(&motor_rf, &motor_rb, &motor_lf, &motor_lb);
+        
+    PWM_SetMotorDuty(MOTOR_RIGHT_FRONT, FP_TO_INT(motor_rf));
+    PWM_SetMotorDuty(MOTOR_RIGHT_BACK, FP_TO_INT(motor_rb));
+    PWM_SetMotorDuty(MOTOR_LEFT_FRONT, FP_TO_INT(motor_lf));
+    PWM_SetMotorDuty(MOTOR_LEFT_BACK, FP_TO_INT(motor_lb));
 }
 
 /**
@@ -180,7 +173,7 @@ static void ProcessIdleLoop(void)
     /* If payload received, transition to preflight mode */
     if (bk_payload_received) {
         if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
-            bk_payload.right_stick_y < 0x10 && bk_payload.right_stick_x < 0x10) {
+            bk_payload.right_stick_y < 0x70 && bk_payload.right_stick_x < 0x70) {
             sys_state = SYS_MOTOR_ON;
             PWM_SetAllMotors(10);
         }
@@ -195,10 +188,17 @@ static void ProcessMotorOnLoop(void)
     /* Poll BK2425 at lower rate */
     SPI_BK_ReadPayload();
     
+    /* Read MPU6050 data */
+    MPU6050_ReadAllData();
+        
+    /* Update state estimation */
+    StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
+                            mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
+
     /* If payload received, transition to Idle mode */
     if (bk_payload_received) {
         if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
-            bk_payload.right_stick_y < 0x10 && bk_payload.right_stick_x < 0x10) {
+            bk_payload.right_stick_y < 0x70 && bk_payload.right_stick_x < 0x70) {
             sys_state = SYS_IDLE;
             PWM_SetAllMotors(0);
         }
@@ -246,11 +246,11 @@ void main(void)
         {
             case SYS_IDLE:
                 /* Idle mode: 20Hz loop */
-                if (timer_tick_20hz) {
-                    ProcessIdleLoop();
-                }
+                if (timer_tick_20hz) ProcessIdleLoop();
                 break;
             case SYS_MOTOR_ON:
+                if (timer_tick_500hz) ProcessMotorOnLoop();
+                break;
             case SYS_FLIGHT:
             case SYS_FLIGHT_AUTO:
             case SYS_FLIGHT_RETURN:
@@ -294,13 +294,14 @@ void main(void)
   */
 void assert_failed(u8* file, u32 line)
 {
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-
-  /* Infinite loop */
-  while (1)
-  {
-  }
+    /* User can add his own implementation to report the file name and line number,
+        ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    (void)line;
+    (void*)file;
+    /* Infinite loop */
+    while (1)
+    {
+    }
 }
 #endif
 

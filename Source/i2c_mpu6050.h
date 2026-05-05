@@ -12,7 +12,7 @@
 #include "stm8s.h"
 
 /* MPU6050 I2C Address */
-#define MPU6050_ADDR        0x68
+#define MPU6050_ADDR        0xD0 /* (0x68 << 1) */
 
 /* MPU6050 Register Addresses */
 #define MPU_REG_SMPLRT_DIV      0x19

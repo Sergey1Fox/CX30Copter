@@ -89,7 +89,7 @@ void I2C_MPU_Init(void)
         }
         
         /* Send MPU address with write */
-        I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_TX);
+        I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_TX);
         timeout = I2C_TIMEOUT;
         while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) && timeout > 0) {
             timeout--;
@@ -145,7 +145,7 @@ uint8_t I2C_MPU_ReadReg(uint8_t reg)
     }
     
     /* Send MPU address with write */
-    I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_TX);
+    I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_TX);
     timeout = I2C_TIMEOUT;
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) && timeout > 0) {
         timeout--;
@@ -166,7 +166,7 @@ uint8_t I2C_MPU_ReadReg(uint8_t reg)
     }
     
     /* Send MPU address with read */
-    I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_RX);
+    I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_RX);
     timeout = I2C_TIMEOUT;
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED) && timeout > 0) {
         timeout--;
@@ -211,7 +211,7 @@ void I2C_MPU_WriteReg(uint8_t reg, uint8_t value)
     }
     
     /* Send MPU address with write */
-    I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_TX);
+    I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_TX);
     timeout = I2C_TIMEOUT;
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) && timeout > 0) {
         timeout--;
@@ -254,7 +254,7 @@ uint8_t I2C_MPU_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len)
     }
     
     /* Send MPU address with write */
-    I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_TX);
+    I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_TX);
     timeout = I2C_TIMEOUT;
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) && timeout > 0) {
         timeout--;
@@ -275,7 +275,7 @@ uint8_t I2C_MPU_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len)
     }
     
     /* Send MPU address with read */
-    I2C_Send7bitAddress(MPU6050_ADDR << 1, I2C_DIRECTION_RX);
+    I2C_Send7bitAddress(MPU6050_ADDR, I2C_DIRECTION_RX);
     timeout = I2C_TIMEOUT;
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED) && timeout > 0) {
         timeout--;

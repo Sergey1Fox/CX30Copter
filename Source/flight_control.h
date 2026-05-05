@@ -30,19 +30,36 @@
 #define STICK_LEFT_Y_MAX_FP   ((fp_t)16711680L)  /* 255 * 65536 */
 #define STICK_LEFT_Y_CENTER_FP ((fp_t)8388608L)  /* 128 * 65536 */
 
+#define STICK_RIGHT_MIN    (96)
+#define STICK_RIGHT_MAX    (160)
+#define STICK_RIGHT_CENTER (128)
+#define STICK_LEFT_MIN     (0)
+#define STICK_LEFT_MAX     (255)
+#define STICK_LEFT_CENTER  (128)
+
+/* Yaw rate modes */
+typedef enum {
+    YAW_RATE_MODE90 = 0,
+    YAW_RATE_MODE360,
+    YAW_RATE_MODE540
+} FC_yaw_rate_mode_t;
+
 /* Sliding mode controller output: motor duty adjustments */
 typedef struct {
     fp_t target_roll;
     fp_t target_pitch;
+    fp_t target_yaw_rate;
     fp_t target_vertical_speed;
 } FC_Targets_t;
 
 typedef struct {
     fp_t roll_error;
     fp_t pitch_error;
+    fp_t yaw_rate_error;
     fp_t vertical_error;
     fp_t roll_control;
     fp_t pitch_control;
+    fp_t yaw_rate_control;
     fp_t vertical_control;
 } FC_Control_t;
 
@@ -52,5 +69,6 @@ void FlightControl_UpdateTargets(uint8_t right_stick_x, uint8_t right_stick_y,
 void FlightControl_ComputeMotorDuty(fp_t current_roll, fp_t current_pitch,
                                      fp_t current_yaw_rate, fp_t vertical_speed);
 void FlightControl_GetMotorOutputs(fp_t *rf, fp_t *rb, fp_t *lf, fp_t *lb);
+void FlightControl_SetYawRateMode(FC_yaw_rate_mode_t yaw_rate_mode);
 
 #endif /* __FLIGHT_CONTROL_H */

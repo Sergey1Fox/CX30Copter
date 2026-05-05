@@ -11,6 +11,7 @@
 volatile uint8_t timer_tick_500hz = 0;
 volatile uint8_t timer_tick_20hz = 0;
 volatile uint8_t timer_tick_1hz = 0;
+volatile uint16_t time_seconds = 0;
 
 /* Counter for 20Hz tick (500/20 ≈ 25) */
 //static volatile uint8_t tick_counter = 0;
@@ -67,6 +68,7 @@ void TIM4_Update_Handler(void)
         if (counter_1hz >= TICK_1HZ_DIVIDER) {
             counter_1hz = 0;
             timer_tick_1hz = 1;
+            time_seconds++;
         }
     }
 }

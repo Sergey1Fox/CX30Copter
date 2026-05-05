@@ -19,7 +19,7 @@ typedef int32_t fp_t;
 #define FP_HALF  ((fp_t)0x00008000)
 
 /* Conversion macros */
-#define INT_TO_FP(x)   ((fp_t)((x) << 16))
+#define INT_TO_FP(x)   ((fp_t)((int32_t)(x) << 16))
 #define FP_TO_INT(x)   ((int32_t)((x) >> 16))
 
 /* Pre-computed constants for common float values (avoid floating-point on STM8) */
@@ -59,6 +59,12 @@ static inline fp_t fp_sign(fp_t x) {
 /* Dead zone check: returns 0 if |x| <= threshold, else x */
 static inline fp_t fp_deadzone(fp_t x, fp_t threshold) {
     if (FP_ABS(x) <= threshold) return FP_ZERO;
+    return x;
+}
+
+static inline int8_t int8_deadzone(int8_t x, int8_t threshold) {
+    if (x > 0 && x <= threshold) return 0;
+    if (x < 0 && (-x) <= threshold) return 0;
     return x;
 }
 
