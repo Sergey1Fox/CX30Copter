@@ -92,6 +92,17 @@ void FlightControl_UpdateTargets(uint8_t right_stick_x, uint8_t right_stick_y,
     }
 }
 
+void FlightControl_UpdateTargetsLossControl(fp_t current_z)
+{
+    fc_targets.target_pitch = FP_ZERO;
+    fc_targets.target_roll = FP_ZERO;
+    fc_targets.target_yaw_rate = FP_ZERO;
+    if (current_z < 2)
+        fc_targets.target_vertical_speed = FP_0_1;
+    else 
+        fc_targets.target_vertical_speed = FP_0_5;
+}
+
 void FlightControl_ComputeMotorDuty(fp_t current_roll, fp_t current_pitch,
                                      fp_t current_yaw_rate, fp_t vertical_speed)
 {

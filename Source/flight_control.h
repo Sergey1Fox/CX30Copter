@@ -66,6 +66,7 @@ typedef struct {
 void FlightControl_Init(void);
 void FlightControl_UpdateTargets(uint8_t right_stick_x, uint8_t right_stick_y,
                                    uint8_t left_stick_y, uint8_t left_stick_x);
+void FlightControl_UpdateTargetsLossControl(fp_t current_z);
 void FlightControl_ComputeMotorDuty(fp_t current_roll, fp_t current_pitch,
                                      fp_t current_yaw_rate, fp_t vertical_speed);
 void FlightControl_GetMotorOutputs(fp_t *rf, fp_t *rb, fp_t *lf, fp_t *lb);

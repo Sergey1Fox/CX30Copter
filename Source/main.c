@@ -49,12 +49,14 @@ static volatile uint32_t sys_tick_ms = 0;
 static uint8_t led1_flash_counter = 0;
 static uint8_t led2_no_payload_counter = 0;
 static uint8_t led3_flash_counter = 0;
+static uint16_t time_motor_on = 0;
 
 /* Function prototypes -------------------------------------------------------*/
 static void SystemClock_Config(void);
 static void SysTick_Init(void);
 static void ProcessLEDs(void);
 static void ProcessFlightLoop(void);
+static void ProcessFlightLoopLossControl(void);
 static void ProcessIdleLoop(void);
 static void ProcessMotorOnLoop(void);
 
@@ -130,7 +132,6 @@ static void ProcessLEDs(void)
   */
 static void ProcessFlightLoop(void)
 {
-    static uint8_t loop_counter = 0;
     fp_t motor_rf, motor_rb, motor_lf, motor_lb;
     
     /* Read BK2425 payload */
@@ -163,6 +164,45 @@ static void ProcessFlightLoop(void)
 }
 
 /**
+  * @brief  Process flight control loop (500Hz)
+  */
+static void ProcessFlightLoopLossControl(void)
+{
+    fp_t motor_rf, motor_rb, motor_lf, motor_lb;
+    
+    /* Read BK2425 payload */
+    SPI_BK_ReadPayload();
+    
+    /* Read MPU6050 data */
+    MPU6050_ReadAllData();
+        
+    /* Update state estimation */
+    StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
+                            mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
+        
+    /* Check if in flight mode (payload received) */
+    if (bk_payload_received) {
+        /* Update flight control targets from stick inputs */
+        FlightControl_UpdateTargets(bk_payload.right_stick_x, bk_payload.right_stick_y,
+                                     bk_payload.left_stick_y, bk_payload.left_stick_x);
+        sys_state = SYS_FLIGHT;
+    } else {
+        FlightControl_UpdateTargetsLossControl(quad_state.z);
+    }
+        
+    /* Compute motor duty cycles */
+    FlightControl_ComputeMotorDuty(quad_state.roll, quad_state.pitch, quad_state.wyaw, quad_state.Vz);
+        
+    /* Get motor outputs and apply */
+    FlightControl_GetMotorOutputs(&motor_rf, &motor_rb, &motor_lf, &motor_lb);
+        
+    PWM_SetMotorDuty(MOTOR_RIGHT_FRONT, FP_TO_INT(motor_rf));
+    PWM_SetMotorDuty(MOTOR_RIGHT_BACK, FP_TO_INT(motor_rb));
+    PWM_SetMotorDuty(MOTOR_LEFT_FRONT, FP_TO_INT(motor_lf));
+    PWM_SetMotorDuty(MOTOR_LEFT_BACK, FP_TO_INT(motor_lb));
+}
+
+/**
   * @brief  Process idle loop (20Hz)
   */
 static void ProcessIdleLoop(void)
@@ -175,6 +215,7 @@ static void ProcessIdleLoop(void)
         if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
             bk_payload.right_stick_y < 0x70 && bk_payload.right_stick_x < 0x70) {
             sys_state = SYS_MOTOR_ON;
+            time_motor_on = time_seconds; /*Store motor on time to eliminate stop motor in MotorOnLoop */
             PWM_SetAllMotors(10);
         }
     }
@@ -195,12 +236,20 @@ static void ProcessMotorOnLoop(void)
     StateEstimation_Update(mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z,
                             mpu_data.gyro_x, mpu_data.gyro_y, mpu_data.gyro_z);
 
+    
     /* If payload received, transition to Idle mode */
     if (bk_payload_received) {
         if (bk_payload.left_stick_y < 0x10 && bk_payload.left_stick_x > 0xE0 &&
             bk_payload.right_stick_y < 0x70 && bk_payload.right_stick_x < 0x70) {
-            sys_state = SYS_IDLE;
-            PWM_SetAllMotors(0);
+            if ((time_seconds - time_motor_on) > 5 && quad_state.z < FP_0_01) {
+                sys_state = SYS_IDLE;
+                PWM_SetAllMotors(0);
+            }
+        } else {
+            if (bk_payload.left_stick_y > STICK_LEFT_CENTER) {
+                sys_state = SYS_FLIGHT;
+                PWM_SetAllMotors(20);
+            }
         }
     }
 }
@@ -254,11 +303,12 @@ void main(void)
             case SYS_FLIGHT:
             case SYS_FLIGHT_AUTO:
             case SYS_FLIGHT_RETURN:
+                /* Flight mode: 500Hz loop */
+                if (timer_tick_500hz) ProcessFlightLoop();
+                break;
             case SYS_FLIGHT_LOSSCONTROL:
                 /* Flight mode: 500Hz loop */
-                if (timer_tick_500hz) {
-                    ProcessFlightLoop();
-                }
+                if (timer_tick_500hz) ProcessFlightLoopLossControl();
                 break;
         
             default:
