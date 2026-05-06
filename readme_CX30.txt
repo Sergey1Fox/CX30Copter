@@ -71,3 +71,7 @@ I = 250mA
 IP gateway = 172.16.10.1
 
 UART 19200
+Add module to send state of quadrocoper, bk_payload, voltage on UART2 with frequency 1hz.
+pin PD5, PD6.
+Speeds 19200 and 56700 set through #define
+Use interrupt to free CPU
